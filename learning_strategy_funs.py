@@ -1,6 +1,11 @@
 # coding: utf-8
 from collections import namedtuple
+import copy
 import unittest
+import logging
+
+logging.basicConfig(filename='learning_duration.log', level=logging.INFO)
+log = logging.getLogger(__name__)
 
 Status = namedtuple('Status', 'done, time_status, msgs')
 
@@ -34,7 +39,7 @@ def build_task_mini_score_pct(rule):
     score_pct = rule['value']
     def _(status, sds):
         grades = sds.get('task_mini_score_pct')
-        max_grade, grade = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
+        (max_grade, grade) = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
         current_score_pct = 1 if max_grade == 0 else float(grade)/max_grade
         is_ok = current_score_pct >= score_pct
         msg = 'Task is passed' if is_ok else 'Task is not passed'
@@ -46,7 +51,7 @@ def build_unit_test_mini_score_pct(rule):
     score_pct = rule['value']
     def _(status, sds):
         grades = sds.get('unit_test_mini_score_pct')
-        max_grade, grade = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
+        (max_grade, grade) = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
         current_score_pct = 1 if max_grade == 0 else float(grade)/max_grade
         is_ok = current_score_pct >= score_pct
         msg = 'UT is passed' if is_ok else 'UT is not passed'
@@ -102,61 +107,55 @@ chapter_strategy= {
     ]
 }
 
+DATA = {
+    "schedule_rule": 503 + 1469583982,
+    "task_mini_score_pct": [[1, 0], [1, 1], [1, 0], [1, 1], [1, 1]],
+    "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
+    "learning_duration": 8000
+}
 
 class TestEngine(unittest.TestCase):
-    def test_engine_done(self):
-        engine = buildEngine(chapter_strategy)
-        result, sds = engine({
-            "schedule_rule": 503 + 1469583982,
-            "task_mini_score_pct": [[1, 0], [1, 1], [1, 0], [1, 1], [1, 1]],
-            "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
-            "learning_duration": 8000
-        })
+    def setUp(self):
+        self.engine = buildEngine(chapter_strategy)
+
+    def test_done(self):
+        (result, sds) = self.engine(DATA)
         self.assertTrue(result.done, "it must be done")
 
-    def test_engine_not_done(self):
-        engine = buildEngine(chapter_strategy)
-        result, sds = engine({
-            "schedule_rule": 503 + 1469583982,
-            "task_mini_score_pct": [[1, 0], [1, 1], [1, 0], [1, 1], [1, 1]],
-            "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
-            "learning_duration": 3000,
-        })
-        self.assertTrue(result.done == False, "it must not be done")
-        engine = buildEngine(chapter_strategy)
-        result, sds = engine({
-            "schedule_rule": 503 + 1469583982,
-            "task_mini_score_pct": [[1, 0], [1, 0], [1, 0], [1, 1], [1, 1]],
-            "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
-            "learning_duration": 3000,
-        })
+    def test_not_done_learning_duration(self):
+        LEARNING_DURATION_DATA = copy.deepcopy(DATA)
+        LEARNING_DURATION_DATA['learning_duration'] = 3000
+        (result, sds) = self.engine(LEARNING_DURATION_DATA)
         self.assertTrue(result.done == False, "it must not be done")
 
-        result, sds = engine({
-            "schedule_rule": 503 + 1460583982,
-            "task_mini_score_pct": [[1, 0], [1, 0], [1, 0], [1, 1], [1, 1]],
-            "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
-            "learning_duration": 3000,
-        })
+    def test_not_done_schedule_rule(self):
+        SCHEDULE_RULE_DATA = copy.deepcopy(DATA)
+        SCHEDULE_RULE_DATA['schedule_rule'] = 1469583982
+        (result, sds) = self.engine(SCHEDULE_RULE_DATA)
+        self.assertTrue(result.done == False, "it must not be done")
+
+    def test_not_done_task_mini(self):
+        TASK_DATA = copy.deepcopy(DATA)
+        TASK_DATA['task_mini_score_pct'] = [[1, 0], [1, 0], [1, 0], [1, 1], [1, 1]]
+        (result, sds) = self.engine(TASK_DATA)
+        self.assertTrue(result.done == False, "it must not be done")
+
+    def test_not_done_unit_test(self):
+        UNIT_TEST_DATA = copy.deepcopy(DATA)
+        UNIT_TEST_DATA['unit_test_mini_score_pct'] = [[1, 0], [1, 0], [1, 1], [1, 1], [1, 1]]
+        (result, sds) = self.engine(UNIT_TEST_DATA)
         self.assertTrue(result.done == False, "it must not be done")
 
 
 if __name__ == '__main__':
-    import time
-    data = {
-        "schedule_rule": 503 + 1469583982,
-        "task_mini_score_pct": [[1, 0], [1, 1], [1, 0], [1, 1], [1, 1]],
-        "unit_test_mini_score_pct": [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]],
-        "learning_duration": 3000,
-    }
-    import logging
-    logging.basicConfig(filename='learning_duration.log', level=logging.INFO)
-    log = logging.getLogger(__name__)
-    engine = buildEngine(chapter_strategy)
-    begin = time.time()
-    for i in xrange(1000000):
-        # for _ in xrange(8):
-        #     log.debug(data)
-        result = engine(data)
-    print(time.time() - begin)
-    #unittest.main()
+    # import time
+    # LEARNING_DURATION_DATA = copy.deepcopy(DATA)
+    # LEARNING_DURATION_DATA['learning_duration'] = 3000
+    # engine = buildEngine(chapter_strategy)
+    # begin = time.time()
+    # for i in xrange(1000000):
+    #     # for _ in xrange(8):
+    #     #     log.debug(data)
+    #     result = engine(LEARNING_DURATION_DATA)
+    # print(time.time() - begin)
+    unittest.main()

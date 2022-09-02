@@ -2,9 +2,9 @@
 from collections import namedtuple
 import logging
 import sys
+
 if sys.version_info[0] == 3:
     from functools import reduce
-
 
 logging.basicConfig(filename='learning_duration.log', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 Status = namedtuple('Status', 'done, time_status, msgs')
 
 unit = lambda sds: (Status(True, True, []), sds)
+
 
 def bind(m_status, strategy_rule):
     def _(sds):
@@ -21,6 +22,7 @@ def bind(m_status, strategy_rule):
         else:
             return strategy_rule(status, sds1)
     return _
+
 
 def build_schedule_rule(rule):
     """关于单元学习的开始时间/结束时间的约束"""
@@ -36,6 +38,7 @@ def build_schedule_rule(rule):
         return (Status(is_ok and status.done, is_ok, status.msgs + [msg]), sds)
     return _
 
+
 def build_task_mini_score_pct(rule):
     """关于单元内所有练习模块下的Task的最低正确率的约束"""
     score_pct = rule['value']
@@ -48,6 +51,7 @@ def build_task_mini_score_pct(rule):
         return (Status(is_ok and status.done, status.time_status, status.msgs + [msg]), sds)
     return _
     
+
 def build_unit_test_mini_score_pct(rule):
     """关于单元测试模块的最低正确率的约束"""
     score_pct = rule['value']
@@ -59,6 +63,7 @@ def build_unit_test_mini_score_pct(rule):
         msg = 'UT is passed' if is_ok else 'UT is not passed'
         return (Status(is_ok and status.done, status.time_status, status.msgs + [msg]), sds)
     return _
+
 
 def build_learning_duration(rule):
     """关于单元内所有微课+单元测试的学习时长的最低要求"""
@@ -85,5 +90,4 @@ def buildEngine(chapter_strategy):
     rs.sort(key=lambda x: RULE_TYPE_ORDER.index(x['type']))
     rules = map(lambda r: MAP_FOR_BUILD_RULE[r['type']](r), rs)
     return reduce(bind, rules, unit)
-
 

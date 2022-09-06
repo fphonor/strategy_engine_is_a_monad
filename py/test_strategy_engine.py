@@ -54,25 +54,8 @@ def main(DATA):
         # log.info("abc: %s - %d", "brian", 9)
         result = engine(DATA)
         # buildEngine(CHAPTER_STRATEGY)(LEARNING_DURATION_DATA)
-    print(time.time() - begin)
+    print((time.time() - begin)/n)
     # print(engine(DATA))
-
-
-    # import cProfile, pstats
-    # from io import StringIO
-    # pr = cProfile.Profile()
-    # pr.enable()
-
-    # result = engine(DATA)
-
-    # pr.disable()
-    # s = StringIO()
-    # sortby = 'cumulative'
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
-    # unittest.main()
-
 
 class TestEngine(unittest.TestCase):
     def setUp(self):

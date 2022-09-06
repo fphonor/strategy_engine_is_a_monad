@@ -9,18 +9,20 @@ if sys.version_info[0] == 3:
 logging.basicConfig(filename='learning_duration.log', level=logging.INFO)
 log = logging.getLogger(__name__)
 
-Status = namedtuple('Status', 'done, time_status, msgs')
+# Status = namedtuple('Status', 'done, msgs')
 
-unit = lambda sds: (Status(True, True, []), sds)
+unit = lambda sds: ((True, []), sds)
 
 
 def bind(m_status, strategy_rule):
     def _(sds):
-        (status, sds1) = m_status(sds)
-        if not status.done:
-            return (status, sds1)
-        else:
-            return strategy_rule(status, sds1)
+        (done, msgs), sds = m_status(sds)
+
+        if not done:
+            return (done, msgs), sds
+
+        (done_, msgs_), sds_ = strategy_rule(sds)
+        return (done and done_, msgs + msgs_), sds_
     return _
 
 
@@ -28,51 +30,51 @@ def build_schedule_rule(rule):
     """关于单元学习的开始时间/结束时间的约束"""
     begin = rule['value']['begin']
     end = rule['value']['end']
-    def _(status, sds):
+    def _(sds):
         now = sds.get('schedule_rule')
         is_ok = begin <= now and now < end
         if is_ok:
             msg = 'You can done the work now'
         else:
             msg = ('Wait %s second' % (begin - now)) if begin > now else ('You are late: %s second' % (end - now))
-        return (Status(is_ok and status.done, is_ok, status.msgs + [msg]), sds)
+        return (is_ok, [msg]), sds
     return _
 
 
 def build_task_mini_score_pct(rule):
     """关于单元内所有练习模块下的Task的最低正确率的约束"""
     score_pct = rule['value']
-    def _(status, sds):
+    def _(sds):
         grades = sds.get('task_mini_score_pct')
         (max_grade, grade) = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
         current_score_pct = 1 if max_grade == 0 else float(grade)/max_grade
         is_ok = current_score_pct >= score_pct
         msg = 'Task is passed' if is_ok else 'Task is not passed'
-        return (Status(is_ok and status.done, status.time_status, status.msgs + [msg]), sds)
+        return (is_ok, [msg]), sds
     return _
     
 
 def build_unit_test_mini_score_pct(rule):
     """关于单元测试模块的最低正确率的约束"""
     score_pct = rule['value']
-    def _(status, sds):
+    def _(sds):
         grades = sds.get('unit_test_mini_score_pct')
         (max_grade, grade) = reduce(lambda acc, x: (acc[0] + x[0], acc[1] + x[1]), grades, (0, 0))
         current_score_pct = 1 if max_grade == 0 else float(grade)/max_grade
         is_ok = current_score_pct >= score_pct
         msg = 'UT is passed' if is_ok else 'UT is not passed'
-        return (Status(is_ok and status.done, status.time_status, status.msgs + [msg]), sds)
+        return (is_ok, [msg]), sds
     return _
 
 
 def build_learning_duration(rule):
     """关于单元内所有微课+单元测试的学习时长的最低要求"""
     expected_learning_duration = rule['value']
-    def _(status, sds):
+    def _(sds):
         learning_duration = sds.get('learning_duration')
         is_ok = learning_duration >= expected_learning_duration
         msg = '`learning_duration` is passed' if is_ok else '`learning_duration` is not passed'
-        return (Status(is_ok and status.done, status.time_status, status.msgs + [msg]), sds)
+        return (is_ok, [msg]), sds
     return _
 
 RULE_TYPE_MAP = [

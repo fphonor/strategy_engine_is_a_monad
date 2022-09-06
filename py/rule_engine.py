@@ -6,7 +6,7 @@ import sys
 if sys.version_info[0] == 3:
     from functools import reduce
 
-logging.basicConfig(filename='learning_duration.log', level=logging.INFO)
+logging.basicConfig(filename='rule_engine.log', level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # Status = namedtuple('Status', 'done, msgs')

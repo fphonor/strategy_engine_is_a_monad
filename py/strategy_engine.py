@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 # Status = namedtuple('Status', 'done, msgs')
 
+# show use `return`, however `return` is the keyword of python
 unit = lambda sds: ((True, []), sds)
 
 
@@ -89,7 +90,10 @@ MAP_FOR_BUILD_RULE = dict(map(lambda x: x[1:], RULE_TYPE_MAP))
 
 def buildEngine(chapter_strategy):
     rs = chapter_strategy['rules']
+
+    # sort the sub-rules before build the RULE
     rs.sort(key=lambda x: RULE_TYPE_ORDER.index(x['type']))
+
     rules = map(lambda r: MAP_FOR_BUILD_RULE[r['type']](r), rs)
     return reduce(bind, rules, unit)
 
